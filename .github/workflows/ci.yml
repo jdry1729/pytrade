@@ -33,7 +33,7 @@ jobs:
 
       - name: Install package
         run: |
-          pip install . --index-url https://gitlab.com/api/v4/groups/63736643/-/packages/pypi/simple
+          pip install .
 
       - name: Run tests
         run: python -m pytest tests/unit --junitxml=report.xml
