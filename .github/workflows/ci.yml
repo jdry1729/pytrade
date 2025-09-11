@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.11
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up environment
+        run: |
+          python -V
+          pip install virtualenv
+          virtualenv venv
+          source venv/bin/activate
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Run linter
+        run: ruff check .
+
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.11
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up environment
+        run: |
+          python -V
+          pip install virtualenv
+          virtualenv venv
+          source venv/bin/activate
+
+      - name: Install package
+        run: |
+          pip install . --index-url https://gitlab.com/api/v4/groups/63736643/-/packages/pypi/simple
+
+      - name: Run tests
+        run: python -m pytest tests/unit --junitxml=report.xml
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-report
+          path: report.xml
+          retention-days: 14
+
+#  deploy:
+#    runs-on: ubuntu-latest
+#    container:
+#      image: python:3.11
+#    needs: test
+#    if: github.ref == 'refs/heads/main'
+#    steps:
+#      - uses: actions/checkout@v4
+#
+#      - name: Set version
+#        id: version
+#        run: |
+#          VERSION=$(cat VERSION.txt)
+#          LOCAL_VERSION_LABEL=$(date "+%Y%m%d%H%M%S").${GITHUB_SHA::8}
+#          echo "$VERSION+$LOCAL_VERSION_LABEL" > VERSION.txt
+#          echo "version=$VERSION+$LOCAL_VERSION_LABEL" >> $GITHUB_OUTPUT
+#
+#      - name: Build package
+#        run: |
+#          pip install build twine
+#          python -m build
+#
+#      - name: Upload to PyPI
+#        uses: pypa/gh-action-pypi-publish@release/v1
+#        with:
+#          password: ${{ secrets.PYPI_API_TOKEN }}
