@@ -3,7 +3,12 @@ name: CI
 on:
   push:
     branches: [ master ]
-  pull_request:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'Set to true for official release, false for dev build'
+        required: true
+        default: 'false'
 
 defaults:
   run:
@@ -48,7 +53,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: test
-    if: github.ref == 'refs/heads/master'
     steps:
       - uses: actions/checkout@v4
 
@@ -58,10 +62,19 @@ jobs:
           pip install build twine
 
       - name: Set version
+        id: set_version
         run: |
-          VERSION=$(cat VERSION.txt)
-          LOCAL_VERSION_LABEL=$(date "+%Y%m%d%H%M%S").${GITHUB_SHA::8}
-          echo "$VERSION+$LOCAL_VERSION_LABEL" > VERSION.txt
+          BASE_VERSION=$(cat VERSION.txt)
+          
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.release }}" == "true" ]; then
+              FULL_VERSION=$BASE_VERSION
+          else
+              LOCAL_VERSION_LABEL=$(date "+%Y%m%d%H%M%S").${GITHUB_SHA::8}
+              FULL_VERSION="${BASE_VERSION}.dev${LOCAL_VERSION_LABEL}"
+          fi
+          
+          # Write to VERSION.txt so build uses it
+          echo "$FULL_VERSION" > VERSION.txt
 
       - name: Build package
         run: python -m build
