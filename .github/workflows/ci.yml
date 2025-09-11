@@ -74,7 +74,14 @@ jobs:
           fi
           
           # Write to VERSION.txt so build uses it
+          
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "BASE_VERSION=$BASE_VERSION"
+          echo "LOCAL_VERSION_LABEL=$LOCAL_VERSION_LABEL"
+          echo "FULL_VERSION=$FULL_VERSION"
+          
           echo "$FULL_VERSION" > VERSION.txt
+          cat VERSION.txt
 
       - name: Build package
         run: python -m build
