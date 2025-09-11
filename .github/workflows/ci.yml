@@ -69,19 +69,12 @@ jobs:
           if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.release }}" == "true" ]; then
               FULL_VERSION=$BASE_VERSION
           else
-              LOCAL_VERSION_LABEL=$(date "+%Y%m%d%H%M%S")+${GITHUB_SHA::8}
+              LOCAL_VERSION_LABEL=$(date "+%Y%m%d%H%M%S")
               FULL_VERSION="${BASE_VERSION}.dev${LOCAL_VERSION_LABEL}"
           fi
           
-          # Write to VERSION.txt so build uses it
-          
-          echo "GITHUB_SHA=$GITHUB_SHA"
-          echo "BASE_VERSION=$BASE_VERSION"
-          echo "LOCAL_VERSION_LABEL=$LOCAL_VERSION_LABEL"
-          echo "FULL_VERSION=$FULL_VERSION"
-          
+          # Write to VERSION.txt so build uses it          
           echo "$FULL_VERSION" > VERSION.txt
-          cat VERSION.txt
 
       - name: Build package
         run: python -m build
