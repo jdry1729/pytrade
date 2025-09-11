@@ -7,9 +7,7 @@ name = "pytrade"
 description = "A systematic trading framework."
 authors = [{ name = "Jack Dry" }]
 dependencies = [
-    # pinned since matplotlib 3.10.0 gives error:
-    # AttributeError: module 'matplotlib' has no attribute 'get_data_path'
-    "matplotlib==3.9.4",
+    "matplotlib",
     "cvxpy",
     "ecos",
     "websockets>=8.1",
@@ -20,18 +18,15 @@ dependencies = [
     "numpy",
     "pandas",
     "scipy",
-    "sequel",
-    "sqlalchemy==1.4.46",
+    "sqlalchemy",
     "scikit-learn",
-    # pinned due to: https://github.com/man-group/ArcticDB/issues/1788
-    "arcticdb==4.4.3",
+    "arcticdb",
     "seaborn",
     "pytest",
     "tabulate",
     "tqdm",
     "aiohttp",
     "networkx",
-    "ray[default]",
     "selenium",
     "xvfbwrapper",
     "dill",
