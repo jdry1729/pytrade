@@ -3,9 +3,9 @@ from typing import Callable, Tuple, Any, Optional, Union, Collection
 
 from pytrade.graph import NodeRef, set_ns, add_node
 
-from neptune.data import process_signal, reindex
-from neptune.graph import TIMES, ASSETS, LIVE_TIME
-from neptune.utils import loc
+from pytrade.neptune.data import process_signal, reindex
+from pytrade.neptune.graph import TIMES, ASSETS, LIVE_TIME
+from pytrade.neptune.utils import loc
 
 logger = logging.getLogger(__name__)
 

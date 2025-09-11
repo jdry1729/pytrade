@@ -4,11 +4,11 @@ from typing import Optional
 from typing import Union, Tuple
 
 import pandas as pd
-from neptune import PRICES, FUM, ASSET_DECIMALS
-from neptune.data import process_signal, reindex
-from neptune.graph import (TIMES, RETURNS, LIVE_TIME,
+from pytrade.neptune import PRICES, FUM, ASSET_DECIMALS
+from pytrade.neptune.data import process_signal, reindex
+from pytrade.neptune.graph import (TIMES, RETURNS, LIVE_TIME,
                            ASSETS)
-from neptune.utils import loc
+from pytrade.neptune.utils import loc
 from pytrade.exec.utils import positions_to_trades
 from pytrade.graph import add_node, add_alias, NodeRef, node_exists, set_ns, add_edge
 from pytrade.portfolio.construction import allocate, vol_scale, weights_to_positions
