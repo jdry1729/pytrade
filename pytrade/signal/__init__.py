@@ -1,1 +1,0 @@
-from pytrade.signal.transforms import buffer_signal

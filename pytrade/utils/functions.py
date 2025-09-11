@@ -3,17 +3,6 @@ from dataclasses import dataclass, field
 from typing import List, Callable, Iterable, Dict, Any, Tuple, Optional
 
 
-@dataclass(frozen=True)
-class Computation:
-    fn: Callable
-    args: Tuple[Any, ...] = ()
-    kwargs: Dict[str, Any] = field(default_factory=dict)
-
-
-def c(fn: Callable, args: Tuple[Any, ...] = (), **kwargs) -> Computation:
-    return Computation(fn, args, kwargs)
-
-
 def raise_(e):
     raise e
 

@@ -11,7 +11,7 @@ from matplotlib.gridspec import GridSpec
 from pandas.tseries.frequencies import to_offset
 from pytrade.data.arctic import write_data, read_data
 from pytrade.data.utils import leading_zeros_to_nan
-from pytrade.exec.utils import positions_to_trades
+from pytrade.utils.position import positions_to_trades
 from pytrade.portfolio.construction import weights_to_positions, ignore_small_trades, \
     positions_to_weights
 from pytrade.stats.tests import ttest_1samp

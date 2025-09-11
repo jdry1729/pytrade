@@ -9,8 +9,7 @@ import tabulate as tabulate_
 from IPython.display import display as ipython_display
 
 from pytrade.utils.collections import is_iterable_of, ensure_list, contains_duplicates
-from pytrade.utils.types import DataFrameOrSeries
-from pytrade.utils.typing import T1
+from pytrade.utils.typing import T1, DataFrameOrSeries
 
 
 def display(obj: Union[pd.DataFrame, pd.Series], *,

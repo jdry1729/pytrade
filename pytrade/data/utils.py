@@ -2,15 +2,6 @@ import numpy as np
 import pandas as pd
 
 
-def simulate_returns():
-    """
-    Use Monte Carlo simulation to simulate returns as random walk.
-    Or using geometric brownian motion:
-    https://stackoverflow.com/questions/16734621/random-walk-pandas.
-    """
-    pass
-
-
 def round_to_multiple(n, step):
     if n >= 0:
         return step * (n // step)
