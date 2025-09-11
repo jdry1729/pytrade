@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pytrade"
+description = "A systematic trading framework."
+authors = [{ name = "Jack Dry" }]
+dependencies = [
+    # pinned since matplotlib 3.10.0 gives error:
+    # AttributeError: module 'matplotlib' has no attribute 'get_data_path'
+    "matplotlib==3.9.4",
+    "cvxpy",
+    "ecos",
+    "websockets>=8.1",
+    "requests",
+    "tomli",
+    "retry",
+    "psycopg2-binary",
+    "numpy",
+    "pandas",
+    "scipy",
+    "sequel",
+    "sqlalchemy==1.4.46",
+    "scikit-learn",
+    # pinned due to: https://github.com/man-group/ArcticDB/issues/1788
+    "arcticdb==4.4.3",
+    "seaborn",
+    "pytest",
+    "tabulate",
+    "tqdm",
+    "aiohttp",
+    "networkx",
+    "ray[default]",
+    "selenium",
+    "xvfbwrapper",
+    "dill",
+    "regex",
+    "statsmodels",
+    "curl_cffi",
+    "ipython",
+    "s3fs",
+    "beautifulsoup4",
+    "jsmin",
+    "nltk",
+    "pycryptodome",
+    "secretstorage",
+    "pandas_market_calendars",
+    "unidecode",
+    "lxml",
+    "arelle-release",
+    "edgartools"
+]
+dynamic = ["version"]
+
+[project.scripts]
+pt = "pytrade.cli.cli:main"
+
+#[tool.setuptools]
+#packages = ["pytrade"]
+
+[tool.setuptools.packages]
+find = { }  # Scan the project directory with the default parameters
+
+[tool.setuptools.dynamic]
+version = { file = "VERSION.txt" }
+
+[tool.ruff]
+ignore = ["F403", "E741", "E722", "F401", "E402", "E743", "E731"]
