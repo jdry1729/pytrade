@@ -150,7 +150,8 @@ def _numpy_fit_factor_return_model(
     T = returns.shape[0]
     # must shift loadings and weights forward!
     loadings = shift(loadings, 1)
-    weights = shift(weights, 1)
+    if weights is not None:
+        weights = shift(weights, 1)
     for i in range(T):
         weights_ = None if weights is None else weights[i]
         mod = _numpy_fit_single_period_factor_return_model(

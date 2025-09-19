@@ -13,7 +13,8 @@ from arcticdb import Arctic, QueryBuilder
 from arcticdb.version_store.library import (StagedDataFinalizeMethod, SymbolDescription,
                                             Library, SymbolVersion, VersionInfo)
 from arcticdb_ext.exceptions import ArcticException
-from arcticdb_ext.version_store import NoSuchVersionException, ExpressionNode
+from arcticdb_ext.storage import NoDataFoundException
+from arcticdb_ext.version_store import ExpressionNode
 from pytrade.data.postgres import WriteMode
 from pytrade.utils import stack, str_to_num
 from pytrade.utils.collections import replace, is_collection_of, \
@@ -644,7 +645,7 @@ def read_data(library: str,
             key = keys[i] if keys is not None else symbol
             try:
                 data_ = _read_and_restore_data(library, symbol, **kwargs)
-            except NoSuchVersionException:
+            except NoDataFoundException:
                 if allow_missing:
                     logger.info(f"No data found for symbol: {symbol}")
                     continue

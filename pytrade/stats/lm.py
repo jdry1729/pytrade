@@ -14,6 +14,7 @@ def compute_t_and_p_values(X: np.ndarray, y: np.ndarray, coef: np.ndarray,
 
     resids = y - X @ coef
     sigma_hat = np.sqrt(np.sum(weights * np.square(resids)) / (N - K))
+    # below multiplies each row of X by that observation's weight
     X = X * np.sqrt(weights[:, np.newaxis])
     beta_cov = np.linalg.inv(X.T @ X)
     t_values = coef / (sigma_hat * np.sqrt(np.diagonal(beta_cov)))
