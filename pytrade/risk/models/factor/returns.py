@@ -6,6 +6,7 @@ import pandas as pd
 from sklearn.linear_model import LinearRegression
 
 from pytrade.stats.lm import compute_t_and_p_values
+from pytrade.stats.utils import compute_sample_corr
 from pytrade.utils.collections import is_iterable_of
 from pytrade.utils.numpy import shift
 from pytrade.utils.pandas import pandas_to_numpy
@@ -18,6 +19,8 @@ class _NumpySinglePeriodFactorReturnModel:
     pvalues: np.ndarray
     r2: float
     adj_r2: float
+    # corr2 equals r2 for OLS
+    corr2: float
     sample_size: int
 
 
@@ -28,6 +31,7 @@ class _NumpyFactorReturnModel:
     pvalues: np.ndarray
     r2: np.ndarray
     adj_r2: np.ndarray
+    corr2: np.ndarray
     sample_size: np.ndarray
 
 
@@ -38,6 +42,7 @@ class FactorReturnModel:
     pvalues: pd.DataFrame
     r2: pd.Series
     adj_r2: pd.Series
+    corr2: pd.Series
     sample_size: pd.Series
 
 
@@ -76,6 +81,7 @@ def _numpy_fit_single_period_factor_return_model(
     sample_size = 0
     r2 = np.nan
     adj_r2 = np.nan
+    corr2 = np.nan
     factor_returns = np.full(K, np.nan)
     specific_returns = np.full(N, np.nan)
     pvalues = np.full(K, np.nan)
@@ -98,6 +104,9 @@ def _numpy_fit_single_period_factor_return_model(
         model = LinearRegression(fit_intercept=False)
         model = model.fit(loadings, returns, sample_weight=weights)
         preds = model.predict(loadings)
+        # use compute_sample_corr instead of np.corrcoef since former gives
+        # nan if variance of either variable is 0, whereas latter doesn't
+        corr2 = compute_sample_corr(np.column_stack([preds, returns]))[0, 1]**2
         r2 = model.score(loadings, returns, sample_weight=weights)
         adj_r2 = 1 - ((1 - r2) * (N_ - 1)) / (N_ - K_ - 1)
         _, pvalues_ = compute_t_and_p_values(loadings, returns, model.coef_,
@@ -110,7 +119,7 @@ def _numpy_fit_single_period_factor_return_model(
 
     return _NumpySinglePeriodFactorReturnModel(
         factor_returns=factor_returns, specific_returns=specific_returns,
-        pvalues=pvalues, r2=r2, adj_r2=adj_r2, sample_size=sample_size
+        pvalues=pvalues, r2=r2, adj_r2=adj_r2, corr2=corr2, sample_size=sample_size
     )
 
 
@@ -119,7 +128,8 @@ def _numpy_fit_factor_return_model(
         loadings: np.ndarray,
         *,
         weights: Optional[np.ndarray] = None,
-        min_nonzero_loadings: int = 1) -> _NumpyFactorReturnModel:
+        min_nonzero_loadings: int = 1,
+) -> _NumpyFactorReturnModel:
     """
     Fits factor return model.
 
@@ -146,6 +156,7 @@ def _numpy_fit_factor_return_model(
     pvalues = []
     r2s = []
     adj_r2s = []
+    corr2s = []
     sample_sizes = []
     T = returns.shape[0]
     # must shift loadings and weights forward!
@@ -162,6 +173,7 @@ def _numpy_fit_factor_return_model(
         pvalues.append(mod.pvalues)
         r2s.append(mod.r2)
         adj_r2s.append(mod.adj_r2)
+        corr2s.append(mod.corr2)
         sample_sizes.append(mod.sample_size)
     return _NumpyFactorReturnModel(
         factor_returns=np.vstack(factor_returns),
@@ -169,6 +181,7 @@ def _numpy_fit_factor_return_model(
         pvalues=np.vstack(pvalues),
         r2=np.array(r2s),
         adj_r2=np.array(adj_r2s),
+        corr2=np.array(corr2s),
         sample_size=np.array(sample_sizes),
     )
 
@@ -197,12 +210,35 @@ def _pandas_fit_factor_return_model(
                              pvalues=pvalues,
                              r2=pd.Series(mod.r2, index=returns.index),
                              adj_r2=pd.Series(mod.adj_r2, index=returns.index),
+                             corr2=pd.Series(mod.corr2, index=returns.index),
                              sample_size=pd.Series(
                                  mod.sample_size, index=returns.index))
 
 
 def fit_factor_return_model(returns, loadings, weights=None,
                             min_nonzero_loadings: int = 1):
+    """
+    Fits a factor return model.
+
+    Parameters
+    ----------
+    returns
+        Asset returns.
+    loadings
+        For the sake of interpretability, it's best to scale the loadings of continuous
+        factors so that they follow a standard normal distribution. This is easily
+        achieved by, for example, taking a cross-sectional zscore of the loadings
+        at each timestep.
+    weights
+        Weights to use for WLS. Should be inversely proportional to specific variance.
+        Koller suggests using the square root of market cap (as this is a proxy for
+        the inverse of a stock's specific variance).
+    min_nonzero_loadings
+
+    Returns
+    -------
+    FactorReturnModel
+    """
     array_like = [returns, loadings]
     if is_iterable_of(array_like, pd.DataFrame):
         return _pandas_fit_factor_return_model(

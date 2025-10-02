@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+
 from pytrade.utils import pandas_to_numpy
 
 
@@ -86,3 +87,29 @@ def zero_non_diag(data):
     elif isinstance(data, np.ndarray):
         return _numpy_zero_non_diag(data)
     raise ValueError("data must either be numpy array or dataframe")
+
+
+def compute_sample_corr(X: np.ndarray, tol: float = 1e-12) -> np.ndarray:
+    """
+    Sometimes np.corrcoef returns correlation of 0 even when sample variance
+    of one variable is 0. This function returns nan in these situations.
+
+    Parameters
+    ----------
+    X
+        Data. Rows represent observations, columns represent variables.
+    tol
+        If standard deviation of variable is less than tol, then corr of that
+        variable with all other variables will be nan.
+
+    Returns
+    -------
+    Sample correlation matrix.
+    """
+    cov = np.cov(X, rowvar=False, ddof=1)
+    std = np.sqrt(np.diag(cov))
+    corr = cov / np.outer(std, std)
+    near_zero = std < tol
+    corr[near_zero, :] = np.nan
+    corr[:, near_zero] = np.nan
+    return corr

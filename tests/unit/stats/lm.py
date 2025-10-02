@@ -40,7 +40,7 @@ from pytrade.stats.lm import compute_t_and_p_values
         )
     ]
 )
-def test_compute_realized_cov(X, y, coef_, omega, tvalues, pvalues):
+def test_compute_t_and_p_values(X, y, coef_, omega, tvalues, pvalues):
     weights = 1.0 / omega
     actual = compute_t_and_p_values(X, y, coef_, weights=weights)
     np.testing.assert_allclose(actual[0], tvalues, atol=1e-3, rtol=0)
