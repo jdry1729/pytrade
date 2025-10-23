@@ -118,7 +118,8 @@ def compute_realized_cov(returns: pd.DataFrame, freq: str = "1D",
 
         returns_ = np.nan_to_num(returns_)
         # must multiply by periods to scale to freq
-        cov = periods / (sample_size_ - 1) * (returns_.T @ returns_)
+        # TODO: set realised value to nan if sample size < periods?
+        cov = periods / sample_size_ * (returns_.T @ returns_)
         cov = np.where(sample_size_ >= min_sample_size, cov, np.nan)
         return pd.DataFrame(cov, index=assets, columns=assets)
 

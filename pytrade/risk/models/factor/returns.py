@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 
-from pytrade.stats.lm import compute_t_and_p_values
+from pytrade.stats.lm import compute_t_and_p_values, compute_vifs
 from pytrade.stats.utils import compute_sample_corr
 from pytrade.utils.collections import is_iterable_of
 from pytrade.utils.numpy import shift
@@ -17,6 +17,7 @@ class _NumpySinglePeriodFactorReturnModel:
     factor_returns: np.ndarray
     specific_returns: np.ndarray
     pvalues: np.ndarray
+    vifs: np.ndarray
     r2: float
     adj_r2: float
     # corr2 equals r2 for OLS
@@ -29,6 +30,7 @@ class _NumpyFactorReturnModel:
     factor_returns: np.ndarray
     specific_returns: np.ndarray
     pvalues: np.ndarray
+    vifs: np.ndarray
     r2: np.ndarray
     adj_r2: np.ndarray
     corr2: np.ndarray
@@ -40,6 +42,7 @@ class FactorReturnModel:
     factor_returns: pd.DataFrame
     specific_returns: pd.DataFrame
     pvalues: pd.DataFrame
+    vifs: pd.DataFrame
     r2: pd.Series
     adj_r2: pd.Series
     corr2: pd.Series
@@ -85,6 +88,7 @@ def _numpy_fit_single_period_factor_return_model(
     factor_returns = np.full(K, np.nan)
     specific_returns = np.full(N, np.nan)
     pvalues = np.full(K, np.nan)
+    vifs = np.full(K, np.nan)
 
     # remove samples with nan in
     sample_mask = np.isnan(returns)
@@ -111,15 +115,18 @@ def _numpy_fit_single_period_factor_return_model(
         adj_r2 = 1 - ((1 - r2) * (N_ - 1)) / (N_ - K_ - 1)
         _, pvalues_ = compute_t_and_p_values(loadings, returns, model.coef_,
                                              weights=weights)
+        vifs_ = compute_vifs(loadings, weights=weights)
         sample_size = len(returns)
 
         factor_returns[~factor_mask] = model.coef_
         specific_returns[~sample_mask] = returns - preds
         pvalues[~factor_mask] = pvalues_
+        vifs[~factor_mask] = vifs_
 
     return _NumpySinglePeriodFactorReturnModel(
         factor_returns=factor_returns, specific_returns=specific_returns,
-        pvalues=pvalues, r2=r2, adj_r2=adj_r2, corr2=corr2, sample_size=sample_size
+        pvalues=pvalues, vifs=vifs, r2=r2, adj_r2=adj_r2, corr2=corr2,
+        sample_size=sample_size
     )
 
 
@@ -154,6 +161,7 @@ def _numpy_fit_factor_return_model(
     factor_returns = []
     specific_returns = []
     pvalues = []
+    vifs = []
     r2s = []
     adj_r2s = []
     corr2s = []
@@ -171,6 +179,7 @@ def _numpy_fit_factor_return_model(
         factor_returns.append(mod.factor_returns)
         specific_returns.append(mod.specific_returns)
         pvalues.append(mod.pvalues)
+        vifs.append(mod.vifs)
         r2s.append(mod.r2)
         adj_r2s.append(mod.adj_r2)
         corr2s.append(mod.corr2)
@@ -179,6 +188,7 @@ def _numpy_fit_factor_return_model(
         factor_returns=np.vstack(factor_returns),
         specific_returns=np.vstack(specific_returns),
         pvalues=np.vstack(pvalues),
+        vifs=np.vstack(vifs),
         r2=np.array(r2s),
         adj_r2=np.array(adj_r2s),
         corr2=np.array(corr2s),
@@ -205,9 +215,11 @@ def _pandas_fit_factor_return_model(
     specific_returns = pd.DataFrame(mod.specific_returns, index=returns.index,
                                     columns=returns.columns)
     pvalues = pd.DataFrame(mod.pvalues, index=returns.index, columns=factors)
+    vifs = pd.DataFrame(mod.vifs, index=returns.index, columns=factors)
     return FactorReturnModel(factor_returns=factor_returns,
                              specific_returns=specific_returns,
                              pvalues=pvalues,
+                             vifs=vifs,
                              r2=pd.Series(mod.r2, index=returns.index),
                              adj_r2=pd.Series(mod.adj_r2, index=returns.index),
                              corr2=pd.Series(mod.corr2, index=returns.index),

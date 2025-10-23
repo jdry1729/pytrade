@@ -463,8 +463,8 @@ def str_to_pandas(s: str, index_col: Optional[Union[str, Iterable[str]]] = None,
     return df
 
 
-def color(obj: pd.DataFrame, cmap="viridis", axis=None):
-    return obj.style.background_gradient(cmap=cmap, axis=axis)
+def color(obj: pd.DataFrame, cmap="viridis", axis=None, **kwargs):
+    return obj.style.background_gradient(cmap=cmap, axis=axis, **kwargs)
 
 
 # deprecated: use df.query instead

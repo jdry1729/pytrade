@@ -2,6 +2,7 @@ from typing import Tuple, Optional
 
 import numpy as np
 from scipy.stats import t
+from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 
 def compute_t_and_p_values(X: np.ndarray, y: np.ndarray, coef: np.ndarray,
@@ -41,3 +42,13 @@ def lm(X: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray
     coef, _, _, _ = np.linalg.lstsq(X, y, rcond=None)
     t_values, p_values = compute_t_and_p_values(X, y, coef)
     return coef, t_values, p_values
+
+
+def compute_vifs(X: np.ndarray, weights: Optional[np.ndarray] = None) -> np.ndarray:
+    K = X.shape[1]
+    if K == 1:
+        return np.full(1, np.nan)
+    if weights is not None:
+        X = X * np.sqrt(weights.reshape((-1, 1)))
+    return np.array([float(variance_inflation_factor(X, i))
+                     for i in range(K)])

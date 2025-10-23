@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FactorAnalytics:
     pvalues: pd.DataFrame
+    vifs: pd.DataFrame
     loadings_corr: pd.DataFrame
     corr2: pd.Series
     factor_returns: pd.DataFrame
@@ -110,6 +111,7 @@ def analyse_factor(
         dm_loss_fn = lambda a, p: 1.0 / 2 * (a ** 2 - p ** 2) - p * (a - p)
 
     pvalues = {}
+    vifs = {}
     corr2 = {}
     factor_returns = {}
     specific_returns = {}
@@ -159,12 +161,14 @@ def analyse_factor(
                 model.corr2, score=corr2_cdf_values,
                 nan_policy="omit") / 100.0, index=corr2_cdf_values)
         pvalues[k] = model.pvalues
+        vifs[k] = model.vifs
         corr2[k] = model.corr2
         sample_size[k] = model.sample_size
         factor_returns[k] = model.factor_returns
         specific_returns[k] = model.specific_returns
 
     dm_test_ = None
+    mad_ = None
     if len(models) > 1:
         full_asset_cov = {}
         for k in models:
@@ -182,26 +186,27 @@ def analyse_factor(
             .reorder_levels(["time", "model", "asset_1", "asset_2"])
             .sort_index()
         )
-        dm_test_ = {}
-        for model_1, model_2 in itertools.combinations(models, 2):
-            cov = pd.concat(
-                [
-                    full_asset_cov.xs(model_1, level="model"),
-                    full_asset_cov.xs(model_2, level="model"),
-                    cov_proxy,
-                ],
-                axis=1,
-                keys=["model_1", "model_2", "actual"],
-            )
-            # TODO: shift predicted cov forward?
-            cov = cov.dropna(how="any")
-            dm_test_[(model_1, model_2)] = cov.groupby(["asset_1", "asset_2"]).apply(
-                lambda x: pd.Series(
-                    dm_test(x["actual"], x["model_1"], x["model_2"], loss=dm_loss_fn),
-                    index=["t_value", "p_value"],
+        if cov_proxy is not None:
+            dm_test_ = {}
+            for model_1, model_2 in itertools.combinations(models, 2):
+                cov = pd.concat(
+                    [
+                        full_asset_cov.xs(model_1, level="model"),
+                        full_asset_cov.xs(model_2, level="model"),
+                        cov_proxy,
+                    ],
+                    axis=1,
+                    keys=["model_1", "model_2", "actual"],
                 )
-            )
-        dm_test_ = stack(dm_test_, names=["model_1", "model_2"])
+                cov = cov.dropna(how="any")
+                dm_test_[(model_1, model_2)] = cov.groupby(["asset_1", "asset_2"]).apply(
+                    lambda x: pd.Series(
+                        # negative t-value indicates model 1 prediction is better
+                        dm_test(x["actual"], x["model_1"], x["model_2"], loss=dm_loss_fn),
+                        index=["t_value", "p_value"],
+                    )
+                )
+                dm_test_ = stack(dm_test_, names=["model_1", "model_2"])
 
     def out_(x: Dict, o: int = 1):
         res = x["model"] if single else stack(x, names=["model"])
@@ -211,6 +216,7 @@ def analyse_factor(
 
     return FactorAnalytics(
         pvalues=out_(pvalues),
+        vifs=out_(vifs),
         corr2=out_(corr2),
         factor_returns=out_(factor_returns),
         specific_returns=out_(specific_returns),
