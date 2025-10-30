@@ -1,9 +1,17 @@
 from typing import Optional, List, Any, Iterable, Union, Tuple, Dict
 
 import matplotlib.axes
+import matplotlib.colors as mcolors
 import numpy as np
 import pandas as pd
 from matplotlib.ticker import Locator
+
+RED_GREEN_CMAP = mcolors.LinearSegmentedColormap.from_list(
+    "custom_rwg", ["red", "white", "green"]
+)
+GREEN_RED_CMAP = mcolors.LinearSegmentedColormap.from_list(
+    "custom_rwg", ["green", "white", "red"]
+)
 
 
 def plot(ax, data, title: Optional[str] = None,

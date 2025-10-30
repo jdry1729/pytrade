@@ -1,13 +1,15 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Callable
 
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 
+from pytrade.risk.models.full import compute_ew_sample_cov
 from pytrade.stats.lm import compute_t_and_p_values, compute_vifs
 from pytrade.stats.utils import compute_sample_corr
 from pytrade.utils.collections import is_iterable_of
+from pytrade.utils.functions import partial
 from pytrade.utils.numpy import shift
 from pytrade.utils.pandas import pandas_to_numpy
 
@@ -27,6 +29,7 @@ class _NumpySinglePeriodFactorReturnModel:
 
 @dataclass
 class _NumpyFactorReturnModel:
+    loadings: np.ndarray
     factor_returns: np.ndarray
     specific_returns: np.ndarray
     pvalues: np.ndarray
@@ -39,6 +42,7 @@ class _NumpyFactorReturnModel:
 
 @dataclass
 class FactorReturnModel:
+    loadings: pd.DataFrame
     factor_returns: pd.DataFrame
     specific_returns: pd.DataFrame
     pvalues: pd.DataFrame
@@ -47,6 +51,21 @@ class FactorReturnModel:
     adj_r2: pd.Series
     corr2: pd.Series
     sample_size: pd.Series
+
+
+@dataclass
+class BarraModel:
+    loadings: pd.DataFrame
+    factor_returns: pd.DataFrame
+    specific_returns: pd.DataFrame
+    pvalues: pd.DataFrame
+    vifs: pd.DataFrame
+    r2: pd.Series
+    adj_r2: pd.Series
+    corr2: pd.Series
+    sample_size: pd.Series
+    factor_cov: pd.DataFrame
+    specific_var: pd.DataFrame
 
 
 def _numpy_fit_single_period_factor_return_model(
@@ -110,7 +129,7 @@ def _numpy_fit_single_period_factor_return_model(
         preds = model.predict(loadings)
         # use compute_sample_corr instead of np.corrcoef since former gives
         # nan if variance of either variable is 0, whereas latter doesn't
-        corr2 = compute_sample_corr(np.column_stack([preds, returns]))[0, 1]**2
+        corr2 = compute_sample_corr(np.column_stack([preds, returns]))[0, 1] ** 2
         r2 = model.score(loadings, returns, sample_weight=weights)
         adj_r2 = 1 - ((1 - r2) * (N_ - 1)) / (N_ - K_ - 1)
         _, pvalues_ = compute_t_and_p_values(loadings, returns, model.coef_,
@@ -168,13 +187,13 @@ def _numpy_fit_factor_return_model(
     sample_sizes = []
     T = returns.shape[0]
     # must shift loadings and weights forward!
-    loadings = shift(loadings, 1)
+    loadings_ = shift(loadings, 1)
     if weights is not None:
         weights = shift(weights, 1)
     for i in range(T):
         weights_ = None if weights is None else weights[i]
         mod = _numpy_fit_single_period_factor_return_model(
-            returns[i], loadings[i], weights=weights_,
+            returns[i], loadings_[i], weights=weights_,
             min_nonzero_loadings=min_nonzero_loadings)
         factor_returns.append(mod.factor_returns)
         specific_returns.append(mod.specific_returns)
@@ -185,6 +204,8 @@ def _numpy_fit_factor_return_model(
         corr2s.append(mod.corr2)
         sample_sizes.append(mod.sample_size)
     return _NumpyFactorReturnModel(
+        # must pass un-shifted loadings below
+        loadings=loadings,
         factor_returns=np.vstack(factor_returns),
         specific_returns=np.vstack(specific_returns),
         pvalues=np.vstack(pvalues),
@@ -216,7 +237,8 @@ def _pandas_fit_factor_return_model(
                                     columns=returns.columns)
     pvalues = pd.DataFrame(mod.pvalues, index=returns.index, columns=factors)
     vifs = pd.DataFrame(mod.vifs, index=returns.index, columns=factors)
-    return FactorReturnModel(factor_returns=factor_returns,
+    return FactorReturnModel(loadings=loadings,
+                             factor_returns=factor_returns,
                              specific_returns=specific_returns,
                              pvalues=pvalues,
                              vifs=vifs,
@@ -263,3 +285,57 @@ def fit_factor_return_model(returns, loadings, weights=None,
     raise ValueError(
         "returns and loadings must either both be dataframes"
         " or all be numpy arrays")
+
+
+def fit_barra_model(
+        returns: pd.DataFrame,
+        loadings: pd.DataFrame,
+        *,
+        weights: Optional[pd.DataFrame] = None,
+        min_nonzero_loadings: int = 1,
+        factor_cov_fn: Optional[Callable[[pd.DataFrame], pd.DataFrame]] = None,
+        specific_var_fn: Optional[Callable[[pd.DataFrame], pd.DataFrame]] = None,
+) -> BarraModel:
+    """
+    Fits Barra Factor model. This involves first fitting a factor return model
+    and then estimating factor covariance matrix and specific variance from the
+    resulting factor and specific returns.
+
+    Parameters
+    ----------
+    returns
+    loadings
+    weights
+    min_nonzero_loadings
+    factor_cov_fn
+    specific_var_fn
+
+    Returns
+    -------
+    BarraModel
+    """
+    if factor_cov_fn is None:
+        factor_cov_fn = partial(compute_ew_sample_cov, alpha=0.06, min_periods=90)
+    if specific_var_fn is None:
+        specific_var_fn = lambda x: x.ewm(alpha=0.06, min_periods=90).var()
+    model = fit_factor_return_model(
+        returns,
+        loadings,
+        weights=weights,
+        min_nonzero_loadings=min_nonzero_loadings
+    )
+    factor_cov = factor_cov_fn(model.factor_returns)
+    specific_var = specific_var_fn(model.specific_returns)
+    return BarraModel(
+        loadings=model.loadings,
+        factor_returns=model.factor_returns,
+        specific_returns=model.specific_returns,
+        pvalues=model.pvalues,
+        vifs=model.vifs,
+        r2=model.r2,
+        adj_r2=model.adj_r2,
+        corr2=model.corr2,
+        sample_size=model.sample_size,
+        factor_cov=factor_cov,
+        specific_var=specific_var,
+    )

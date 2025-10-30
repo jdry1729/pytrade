@@ -114,6 +114,18 @@ def map_level(index: pd.MultiIndex, level: Union[str, int], arg,
     return index
 
 
+def reindex_2(
+        df: pd.DataFrame,
+        level: str,
+        index: Optional[pd.DatetimeIndex] = None,
+        **kwargs
+) -> pd.DataFrame:
+    df_unstacked = df.unstack(level)
+    df_reindexed = df_unstacked.reindex(index, **kwargs)
+    df_filled = df_reindexed.stack(level, future_stack=True)
+    return df_filled
+
+
 def replace_level(index: pd.MultiIndex, values: pd.Index,
                   level: Union[str, int]) -> pd.MultiIndex:
     names = []
